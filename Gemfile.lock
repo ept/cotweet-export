@@ -1,0 +1,28 @@
+GEM
+  remote: http://rubygems.org/
+  specs:
+    addressable (2.2.6)
+    cookiejar (0.3.0)
+    deferrable_gratification (0.3.1)
+      eventmachine
+    em-http-request (1.0.1)
+      addressable (>= 2.2.3)
+      cookiejar
+      em-socksify
+      eventmachine (>= 1.0.0.beta.4)
+      http_parser.rb (>= 0.5.3)
+    em-socksify (0.1.0)
+      eventmachine
+    eventmachine (1.0.0.beta.4)
+    highline (1.6.11)
+    http_parser.rb (0.5.3)
+    json (1.6.5)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  deferrable_gratification
+  em-http-request
+  highline
+  json

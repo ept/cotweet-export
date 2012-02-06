@@ -1,6 +1,7 @@
 module CoTweet
   class Connection
     BASE_URL = URI.parse('https://standard.cotweet.com/')
+    MAX_ATTEMPTS = 10
 
     def initialize
       cmd.say 'Please log in to your CoTweet account.'
@@ -47,17 +48,45 @@ module CoTweet
     end
 
     def get_json(path, query={})
-      EM::HttpRequest.new(BASE_URL.merge(path)).
-        get(:query => query, :head => {:cookie => cookies}).
-        transform do |http|
-          if http.response_header.status == 200
-            cmd.say "success: #{http.encode_query(http.req.uri, query)}"
-            JSON.parse(http.response)
-          else
-            cmd.say "Request to #{path} failed with HTTP #{http.response_header.status}"
-            raise "HTTP #{http.response_header.status}"
+      finished = false
+      attempts = 1
+      delay = 1
+
+      DG::loop_until(proc { finished }) do
+
+        attempt = EM::HttpRequest.new(BASE_URL.merge(path)).
+          get(:query => query, :head => {:cookie => cookies}).
+          transform do |http|
+            path_with_query = http.encode_query(http.req.uri, query)
+            if http.response_header.status == 200
+              JSON.parse(http.response).tap do
+                finished = true
+              end
+            else
+              cmd.say "Request to #{path_with_query} failed with HTTP #{http.response_header.status}"
+              raise "HTTP #{http.response_header.status}"
+            end
+          end
+
+        # If the request fails, schedule another attempt after a delay.
+        DG.blank.tap do |loop_iteration|
+          attempt.callback {|*args| loop_iteration.succeed(*args) }
+          attempt.errback do |error|
+            if attempts < MAX_ATTEMPTS
+              cmd.say "Retrying request after #{delay} seconds"
+              EM.add_timer(delay) do
+                attempts += 1
+                delay *= 2
+                loop_iteration.succeed
+              end
+            else
+              cmd.say "Giving up request after #{attempts} attempts"
+              finished = true
+              loop_iteration.succeed
+            end
           end
         end
+      end
     end
 
     # Values for timeline_name:
@@ -74,7 +103,7 @@ module CoTweet
         query[:max] = waterline if waterline
 
         get_json("/api/1/timeline/#{timeline_name}.json", query).safe_callback do |json|
-          finished = json['items'].nil? || json['items'].empty?
+          finished = json.nil? || json['items'].nil? || json['items'].empty?
           unless finished
             waterline = json['items'].last['id']
             json['items'].each(&block)

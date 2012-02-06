@@ -51,6 +51,7 @@ module CoTweet
         get(:query => query, :head => {:cookie => cookies}).
         transform do |http|
           if http.response_header.status == 200
+            cmd.say "success: #{http.encode_query(http.req.uri, query)}"
             JSON.parse(http.response)
           else
             cmd.say "Request to #{path} failed with HTTP #{http.response_header.status}"
@@ -59,13 +60,25 @@ module CoTweet
         end
     end
 
-    def self.test!
-      EM.run do
-        new.login.bind! do |connection|
-          connection.get_json '/api/1/channels/sources.json'
-        end.bothback do |result|
-          puts result.inspect
-          EM.stop
+    # Values for timeline_name:
+    #  * 'messages' is the inbox (non-archived messages). It has subcategories:
+    #    'dms' is received DMs, 'replies' is received @replies, 'mentions' is received @mentions
+    #  * 'twitter_friends_timeline' is friends' updates
+    #  * 'sent' is sent messages
+    #  * 'closed' is the archive
+    def each_message(timeline_name, &block)
+      finished = false
+      waterline = nil
+      DG::loop_until(proc { finished }) do
+        query = {:limit => 40}
+        query[:max] = waterline if waterline
+
+        get_json("/api/1/timeline/#{timeline_name}.json", query).safe_callback do |json|
+          finished = json['items'].nil? || json['items'].empty?
+          unless finished
+            waterline = json['items'].last['id']
+            json['items'].each(&block)
+          end
         end
       end
     end

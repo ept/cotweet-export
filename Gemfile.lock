@@ -1,10 +1,15 @@
+GIT
+  remote: git://github.com/ConradIrwin/deferrable_gratification.git
+  revision: b4f93600b05cc7f431320472d3a6a788e246eba4
+  specs:
+    deferrable_gratification (0.3.1)
+      eventmachine
+
 GEM
   remote: http://rubygems.org/
   specs:
     addressable (2.2.6)
     cookiejar (0.3.0)
-    deferrable_gratification (0.3.1)
-      eventmachine
     em-http-request (1.0.1)
       addressable (>= 2.2.3)
       cookiejar
@@ -22,7 +27,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  deferrable_gratification
+  deferrable_gratification!
   em-http-request
   highline
   json

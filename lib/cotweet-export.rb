@@ -10,9 +10,9 @@ DG.enhance! EM::HttpClient
 $stdout.sync = true
 
 %w{
-  connection
+  connection export
 }.each do |filename|
   require File.join(File.dirname(__FILE__), 'cotweet', filename)
 end
 
-CoTweet::Connection.test!
+CoTweet::Export.run!

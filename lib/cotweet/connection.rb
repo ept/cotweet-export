@@ -82,5 +82,9 @@ module CoTweet
         end
       end
     end
+
+    def get_conversation(user_id)
+      get_json "/api/1/twitterers/#{user_id}/conversations.json", :limit => 20
+    end
   end
 end

@@ -16,14 +16,26 @@ module CoTweet
         file.puts ',' unless first_message
         file.write JSON.pretty_generate(msg)
         first_message = false
+        msg['twitterer'].andand['id'].andand {|user_id| conversation_downloads << user_id }
       end.bothback do
         file.puts ']}'
         file.close
       end
     end
 
+    def conversation_downloads
+      @conversation_downloads ||= DownloadQueue.new do |user_id|
+        connection.get_conversation(user_id).safe_callback do |json|
+          File.open("conversations/#{user_id}.json", 'w') do |file|
+            file.write JSON.pretty_generate(json)
+          end
+        end
+      end
+    end
+
     def run
-      JoinCarefully.setup! *%w(messages sent closed).map(&method(:export_timeline))
+      JoinCarefully.setup!(*%w(messages sent closed).map(&method(:export_timeline))).
+        bind! { conversation_downloads.finish }
     end
 
     def self.run!
